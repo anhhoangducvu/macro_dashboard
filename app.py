@@ -58,54 +58,54 @@ section[data-testid="stSidebar"] { background: #0d1424; border-right: 1px solid 
   border-radius:20px; background:rgba(100,116,139,.12); color:#94a3b8; }
 
 /* SECTION TITLE */
-.sec-title { font-size:14px; font-weight:700; color:white; display:flex;
-  align-items:center; gap:8px; margin-bottom:14px; padding-bottom:10px;
-  border-bottom:1px solid rgba(255,255,255,0.07); margin-top:6px; }
+.sec-title { font-size:15px; font-weight:700; color:white; display:flex;
+  align-items:center; gap:8px; margin-bottom:16px; padding-bottom:10px;
+  border-bottom:1px solid rgba(255,255,255,0.07); margin-top:10px; }
 
-/* GOLD TABLE */
-.gold-wrap { background:rgba(251,191,36,.04); border:1px solid rgba(251,191,36,.18);
-  border-radius:14px; padding:14px 18px; margin-bottom:24px; }
-.gold-row { display:flex; justify-content:space-between; align-items:center;
-  padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px; }
-.gold-row:last-child { border-bottom:none; }
-.gold-brand { font-weight:700; color:#fbbf24; min-width:60px; }
-.gold-type  { color:#64748b; font-size:12px; flex:1; padding:0 12px; }
-.gold-buy   { color:#22c55e; font-weight:700; text-align:right; min-width:110px; }
-.gold-sell  { color:#ef4444; font-weight:700; text-align:right; min-width:110px; }
-.gold-header { font-size:11px; color:#475569; font-weight:600; letter-spacing:0.7px;
-  text-transform:uppercase; display:flex; justify-content:space-between; margin-bottom:6px; }
-
-/* NEWS */
-.news-item { display:flex; gap:10px; margin-bottom:12px; align-items:flex-start; }
-.news-dot  { width:5px; height:5px; border-radius:50%; background:#3b82f6; margin-top:8px; flex-shrink:0; }
+/* NEWS ITEMS */
+.news-item { display:flex; gap:12px; margin-bottom:14px; align-items:flex-start; }
+.news-dot  { width:6px; height:6px; border-radius:50%; background:#3b82f6; margin-top:6px; flex-shrink:0; }
 .news-text { font-size:12.5px; color:#cbd5e1; line-height:1.6; }
 
 /* SECTOR CARDS */
-.sc-pos { background:rgba(34,197,94,.04); border:1px solid rgba(34,197,94,.2);
-  border-left:4px solid #22c55e; border-radius:12px; padding:14px; margin-bottom:10px; }
-.sc-neg { background:rgba(239,68,68,.04); border:1px solid rgba(239,68,68,.2);
-  border-left:4px solid #ef4444; border-radius:12px; padding:14px; margin-bottom:10px; }
-.sc-name-pos { font-size:13.5px; font-weight:700; color:#22c55e; margin-bottom:5px; }
-.sc-name-neg { font-size:13.5px; font-weight:700; color:#ef4444; margin-bottom:5px; }
-.sc-reason   { font-size:12px; color:#94a3b8; line-height:1.55; margin-bottom:9px; }
+.sc-pos { background:rgba(34,197,94,.04); border:1px solid rgba(34,197,94,.15);
+  border-left:4px solid #22c55e; border-radius:12px; padding:16px; margin-bottom:12px; }
+.sc-neg { background:rgba(239,68,68,.04); border:1px solid rgba(239,68,68,.15);
+  border-left:4px solid #ef4444; border-radius:12px; padding:16px; margin-bottom:12px; }
+.sc-name-pos { font-size:14px; font-weight:800; color:#22c55e; margin-bottom:6px; }
+.sc-name-neg { font-size:14px; font-weight:800; color:#ef4444; margin-bottom:6px; }
+.sc-reason   { font-size:12.5px; color:#94a3b8; line-height:1.6; margin-bottom:10px; }
 .chip-pos { display:inline-block; background:rgba(34,197,94,.12); color:#22c55e;
-  border:1px solid rgba(34,197,94,.3); font-size:11px; font-weight:700;
-  padding:2px 8px; border-radius:5px; margin:2px 4px 2px 0; }
+  border:1px solid rgba(34,197,94,.3); font-size:10.5px; font-weight:700;
+  padding:3px 10px; border-radius:6px; margin:2px 4px 2px 0; }
 .chip-neg { display:inline-block; background:rgba(239,68,68,.12); color:#ef4444;
-  border:1px solid rgba(239,68,68,.3); font-size:11px; font-weight:700;
-  padding:2px 8px; border-radius:5px; margin:2px 4px 2px 0; }
+  border:1px solid rgba(239,68,68,.3); font-size:10.5px; font-weight:700;
+  padding:3px 10px; border-radius:6px; margin:2px 4px 2px 0; }
+
+/* GOLD CARD UI */
+.gold-card { background:rgba(251,191,36,.06); border:1px solid rgba(251,191,36,.15);
+  border-radius:12px; padding:15px; margin-bottom:12px; }
+.gold-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.gold-card-brand { font-size:15px; font-weight:800; color:#fbbf24; }
+.gold-card-type { font-size:11px; color:#94a3b8; font-weight:600; text-transform:uppercase; }
+.gold-price-row { display:flex; justify-content:space-between; gap:10px; }
+.gp-box { flex:1; background:rgba(255,255,255,0.03); border-radius:8px; padding:8px 12px; }
+.gp-lbl { font-size:10px; color:#64748b; text-transform:uppercase; margin-bottom:2px; }
+.gp-val-buy { font-size:16px; font-weight:700; color:#22c55e; }
+.gp-val-sell { font-size:16px; font-weight:700; color:#ef4444; }
 
 /* SENTIMENT */
-.sent-wrap { border-radius:14px; padding:18px 22px; margin-bottom:22px;
-  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
-.sent-badge { display:inline-block; padding:4px 16px; border-radius:20px;
-  font-size:12px; font-weight:700; color:white; margin-bottom:10px; }
-.s-greed   { background:#22c55e; }
-.s-fear    { background:#ef4444; }
-.s-neutral { background:#f59e0b; }
-.sent-summary { font-size:13.5px; color:#cbd5e1; line-height:1.7; margin-bottom:10px; }
-.gold-advice-box { background:rgba(59,130,246,.08); border-left:4px solid #3b82f6;
-  border-radius:0 8px 8px 0; padding:10px 14px; font-size:13px; color:#93c5fd; }
+.sent-wrap { border-radius:14px; padding:20px 24px; margin-bottom:22px;
+  background:linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  border:1px solid rgba(255,255,255,0.08); position:relative; overflow:hidden; }
+.sent-badge { display:inline-block; padding:5px 18px; border-radius:20px;
+  font-size:12px; font-weight:800; color:white; margin-bottom:12px; text-transform:uppercase; }
+.s-greed   { background:linear-gradient(90deg, #22c55e, #16a34a); box-shadow: 0 4px 12px rgba(34,197,94,0.3); }
+.s-fear    { background:linear-gradient(90deg, #ef4444, #dc2626); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+.s-neutral { background:linear-gradient(90deg, #f59e0b, #d97706); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+.sent-summary { font-size:14px; color:#e2e8f0; line-height:1.75; margin-bottom:14px; font-weight:400; }
+.gold-advice-box { background:rgba(59,130,246,.1); border:1px solid rgba(59,130,246,0.2);
+  border-left:4px solid #3b82f6; border-radius:4px 10px 10px 4px; padding:12px 16px; font-size:13.5px; color:#bfdbfe; }
 
 /* Hide streamlit branding */
 #MainMenu, footer, header { visibility:hidden; }
@@ -116,16 +116,13 @@ section[data-testid="stSidebar"] { background: #0d1424; border-right: 1px solid 
 with st.sidebar:
     st.markdown("### ⚙️ Cấu hình")
 
-    # API key: secrets → env → manual input
-    api_key = ""
-    try:
-        api_key = st.secrets.get("GOOGLE_API_KEY", "")
-    except Exception:
-        pass
-    if not api_key:
-        api_key = os.getenv("GOOGLE_API_KEY", "")
-    if not api_key:
-        api_key = st.text_input("🔑 Google API Key:", type="password", placeholder="AIza...")
+    # API key: prioritized from secrets/env (no manual input as per user request)
+    api_key = st.secrets.get("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
+    
+    if api_key:
+        st.success("✅ AI Engine: Connected")
+    else:
+        st.warning("⚠️ API Key chưa được cấu hình trong Secrets.")
 
     if st.button("🔄 Làm mới dữ liệu", type="primary", use_container_width=True):
         st.cache_data.clear()
@@ -133,7 +130,8 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-    st.caption("**V-Macro Insights v3.0**\nDữ liệu: Yahoo Finance, SJC, BTMC, DOJI, CafeF\n⚠️ Chỉ mang tính chất tham khảo – không phải khuyến nghị đầu tư.")
+    st.caption("**V-Macro Insights v3.5**\nDữ liệu: CafeF, DNSE, Yahoo Finance\nVàng: BTMC, BTMH, SJC, DOJI, PNJ\n\n© 2026 TEXO Engineering")
+
 
 
 # ─── HEADER ──────────────────────────────────────────────────────────────────
@@ -226,23 +224,34 @@ st.divider()
 
 
 # ─── DOMESTIC GOLD PRICES ────────────────────────────────────────────────────
-st.markdown('<div class="sec-title">🏅 Giá Vàng Trong Nước (Triệu đồng/lượng)</div>', unsafe_allow_html=True)
+st.markdown('<div class="sec-title">🏅 Diễn biến Giá Vàng Trong Nước</div>', unsafe_allow_html=True)
 
-gold_html = """<div class="gold-wrap">
-  <div class="gold-header">
-    <span>Thương hiệu</span><span>Loại</span>
-    <span style="min-width:110px;text-align:right">Mua vào</span>
-    <span style="min-width:110px;text-align:right">Bán ra</span>
-  </div>"""
-for g in gold_data:
-    gold_html += f"""<div class="gold-row">
-  <span class="gold-brand">{g['brand']}</span>
-  <span class="gold-type">{g['type']}</span>
-  <span class="gold-buy">▲ {g['buy']}</span>
-  <span class="gold-sell">▼ {g['sell']}</span>
+def _gold_card(g):
+    return f"""<div class="gold-card">
+    <div class="gold-card-header">
+        <span class="gold-card-brand">{g['brand']}</span>
+        <span class="gold-card-type">{g['type']}</span>
+    </div>
+    <div class="gold-price-row">
+        <div class="gp-box">
+            <div class="gp-lbl">Mua vào</div>
+            <div class="gp-val-buy">{g['buy']}</div>
+        </div>
+        <div class="gp-box">
+            <div class="gp-lbl">Bán ra</div>
+            <div class="gp-val-sell">{g['sell']}</div>
+        </div>
+    </div>
 </div>"""
-gold_html += "</div>"
-st.markdown(gold_html, unsafe_allow_html=True)
+
+# Render gold prices in a clean grid
+g_cols = st.columns(3)
+for i, g in enumerate(gold_data):
+    with g_cols[i % 3]:
+        st.markdown(_gold_card(g), unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
 
 
 # ─── AI ANALYSIS ─────────────────────────────────────────────────────────────

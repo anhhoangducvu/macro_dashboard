@@ -83,94 +83,82 @@ def _clean(raw: str) -> str:
 
 def scrape_gold_prices_domestic() -> list[dict]:
     """
-    Scrape Vietnamese domestic gold prices from multiple sources.
-    Returns list of dicts: {brand, type, buy, sell}
-    Priority order: SJC → BTMC → DOJI → giavang.org (PNJ/fallback)
+    Scrape Vietnamese domestic gold prices.
+    Priority: Rings for BTMC & BTMH. Bars for SJC, DOJI, PNJ.
+    Returns: [{brand, type, buy, sell}]
     """
     results = []
 
     # ── 1. SJC ──────────────────────────────────────────────────────────────
     try:
-        resp = requests.get("https://sjc.com.vn/", headers=HEADERS, timeout=12)
+        resp = requests.get("https://sjc.com.vn/", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
-        # SJC tables often don't have IDs or use multiple tables.
-        tables = soup.find_all("table")
-        for table in tables:
-            rows = table.find_all("tr")
-            for row in rows:
-                cols = [td.get_text(strip=True) for td in row.find_all("td")]
-                if len(cols) >= 3:
-                    name_up = cols[0].upper()
-                    if "SJC" in name_up and ("TP.HCM" in name_up or "HÀ NỘI" in name_up or "MIẾNG" in name_up):
-                        results.append({"brand": "SJC", "type": "Vàng Miếng SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
-                        break
-            if len([r for r in results if r['brand'] == 'SJC']) > 0: break
-    except Exception:
-        pass
+        for row in soup.find_all("tr"):
+            cols = [td.get_text(strip=True) for td in row.find_all("td")]
+            if len(cols) >= 3 and "SJC" in cols[0].upper() and "TP.HCM" in cols[0].upper():
+                results.append({"brand": "SJC", "type": "Vàng Miếng SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
+                break
+    except Exception: pass
 
-    except Exception:
-        pass
-
-    # ── 2. BTMC ─────────────────────────────────────────────────────────────
+    # ── 2. BTMC (Bảo Tín Minh Châu) ─────────────────────────────────────────
     try:
-        resp = requests.get("https://btmc.vn/", headers=HEADERS, timeout=12)
+        resp = requests.get("https://btmc.vn/", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
-        # BTMC often blocks simple requests. Try searching for specific classes if found.
-        # But for simplicity, let's keep the row search but broaden the criteria.
         for row in soup.find_all("tr"):
             txt = row.get_text(" ", strip=True).upper()
             if "RỒNG THĂNG LONG" in txt or "NHẪN TRÒN" in txt:
                 tds = [td.get_text(strip=True) for td in row.find_all("td")]
                 if len(tds) >= 4:
-                    results.append({"brand": "BTMC", "type": "Vàng Rồng TL", "buy": _clean(tds[-2]), "sell": _clean(tds[-1])})
+                    results.append({"brand": "BTMC", "type": "Nhẫn Tròn Rồng TL", "buy": _clean(tds[-2]), "sell": _clean(tds[-1])})
                     break
+    except Exception: pass
 
-    except Exception:
-        pass
-
-    # ── 3. DOJI ─────────────────────────────────────────────────────────────
+    # ── 3. BTMH (Bảo Tín Mạnh Hải) ──────────────────────────────────────────
     try:
-        resp = requests.get("https://doji.vn/gia-vang/", headers=HEADERS, timeout=10)
+        # BTMH usually has a clean table on their homepage or price page
+        resp = requests.get("https://baotinmanhhai.vn/gia-vang", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
         for row in soup.find_all("tr"):
-            txt = row.get_text(" ", strip=True).lower()
-            if "nhẫn" in txt and "doji" not in str([r["brand"] for r in results]):
+            txt = row.get_text(" ", strip=True).upper()
+            if "NHẪN" in txt and "MẠNH HẢI" in txt:
                 tds = [td.get_text(strip=True) for td in row.find_all("td")]
                 if len(tds) >= 3:
-                    results.append({"brand": "DOJI", "type": "Nhẫn Tròn DOJI 24K", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+                    # Usually: [Type, Buy, Sell]
+                    results.append({"brand": "BTMH", "type": "Nhẫn Kim Gia Bảo", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
                     break
-    except Exception:
-        pass
+    except Exception: pass
 
-    # ── 4. giavang.org (aggregator — PNJ & missing sources) ──────────────────
+    # ── 4. DOJI & PNJ (Via Aggregator for stability) ───────────────────────
     try:
         resp = requests.get("https://giavang.org/", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
-        brands_found = [r["brand"] for r in results]
-        # giavang.org is usually more stable for aggregations.
         for row in soup.find_all("tr"):
             tds = [td.get_text(strip=True) for td in row.find_all("td")]
             if len(tds) < 3: continue
             txt = " ".join(tds).lower()
-            
-            if "pnj" in txt and "PNJ" not in brands_found:
-                results.append({"brand": "PNJ", "type": "Nhẫn PNJ 24K", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
-                brands_found.append("PNJ")
-            elif "doji" in txt and "hà nội" in txt and "DOJI" not in brands_found:
-                results.append({"brand": "DOJI", "type": "Vàng Miếng DOJI", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
-                brands_found.append("DOJI")
+            if "doji" in txt and "miếng" in txt and "hà nội" in txt:
+                results.append({"brand": "DOJI", "type": "Vàng Miếng SJC", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+            elif "pnj" in txt and "miếng" in txt and "hà nội" in txt:
+                results.append({"brand": "PNJ", "type": "Vàng Miếng SJC", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+    except Exception: pass
 
-    except Exception:
-        pass
-
-    # ── Fallback nếu tất cả thất bại ────────────────────────────────────────
-    if not results:
-        results = [
-            {"brand": "SJC",  "type": "Vàng Miếng SJC",   "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
-            {"brand": "BTMC", "type": "Nhẫn Tròn 999.9",  "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
-            {"brand": "DOJI", "type": "Nhẫn Tròn 24K",    "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
-            {"brand": "PNJ",  "type": "Nhẫn PNJ 24K",     "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
+    # Final cleanup: ensure uniqueness and limit results
+    final = []
+    seen = set()
+    for r in results:
+        key = f"{r['brand']}-{r['type']}"
+        if key not in seen:
+            final.append(r)
+            seen.add(key)
+    
+    if not final:
+        return [
+            {"brand": "BTMC", "type": "Nhẫn Tròn Rồng TL", "buy": "Đang tải...", "sell": "Đang tải..."},
+            {"brand": "BTMH", "type": "Nhẫn Kim Gia Bảo", "buy": "Đang tải...", "sell": "Đang tải..."},
+            {"brand": "SJC",  "type": "Vàng Miếng SJC",   "buy": "Đang tải...", "sell": "Đang tải..."},
         ]
+    return final
+
 
     return results
 
