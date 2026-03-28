@@ -93,17 +93,21 @@ def scrape_gold_prices_domestic() -> list[dict]:
     try:
         resp = requests.get("https://sjc.com.vn/", headers=HEADERS, timeout=12)
         soup = BeautifulSoup(resp.content, "html.parser")
-        # Try to find the main gold price table
-        table = soup.find("table", {"id": "gia-vang-sjc"}) or soup.find("table")
-        if table:
-            for row in table.find_all("tr"):
+        # SJC tables often don't have IDs or use multiple tables.
+        tables = soup.find_all("table")
+        for table in tables:
+            rows = table.find_all("tr")
+            for row in rows:
                 cols = [td.get_text(strip=True) for td in row.find_all("td")]
                 if len(cols) >= 3:
                     name_up = cols[0].upper()
-                    if any(k in name_up for k in ["MIẾNG", "VÀNG SJC", "VÀNG S."]):
+                    if "SJC" in name_up and ("TP.HCM" in name_up or "HÀ NỘI" in name_up or "MIẾNG" in name_up):
                         results.append({"brand": "SJC", "type": "Vàng Miếng SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
-                    elif any(k in name_up for k in ["NHẪN", "TRÒN"]):
-                        results.append({"brand": "SJC", "type": "Nhẫn Tròn SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
+                        break
+            if len([r for r in results if r['brand'] == 'SJC']) > 0: break
+    except Exception:
+        pass
+
     except Exception:
         pass
 
@@ -111,13 +115,16 @@ def scrape_gold_prices_domestic() -> list[dict]:
     try:
         resp = requests.get("https://btmc.vn/", headers=HEADERS, timeout=12)
         soup = BeautifulSoup(resp.content, "html.parser")
+        # BTMC often blocks simple requests. Try searching for specific classes if found.
+        # But for simplicity, let's keep the row search but broaden the criteria.
         for row in soup.find_all("tr"):
             txt = row.get_text(" ", strip=True).upper()
-            if "NHẪN TRÒN TRƠN" in txt:
+            if "RỒNG THĂNG LONG" in txt or "NHẪN TRÒN" in txt:
                 tds = [td.get_text(strip=True) for td in row.find_all("td")]
-                if len(tds) >= 5:
-                    results.append({"brand": "BTMC", "type": "Nhẫn Tròn 999.9", "buy": _clean(tds[3]), "sell": _clean(tds[4])})
+                if len(tds) >= 4:
+                    results.append({"brand": "BTMC", "type": "Vàng Rồng TL", "buy": _clean(tds[-2]), "sell": _clean(tds[-1])})
                     break
+
     except Exception:
         pass
 
@@ -140,17 +147,19 @@ def scrape_gold_prices_domestic() -> list[dict]:
         resp = requests.get("https://giavang.org/", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
         brands_found = [r["brand"] for r in results]
+        # giavang.org is usually more stable for aggregations.
         for row in soup.find_all("tr"):
-            txt = row.get_text(" ", strip=True).lower()
             tds = [td.get_text(strip=True) for td in row.find_all("td")]
-            if len(tds) < 3:
-                continue
-            if "pnj" in txt and "nhẫn" in txt and "PNJ" not in brands_found:
+            if len(tds) < 3: continue
+            txt = " ".join(tds).lower()
+            
+            if "pnj" in txt and "PNJ" not in brands_found:
                 results.append({"brand": "PNJ", "type": "Nhẫn PNJ 24K", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
                 brands_found.append("PNJ")
-            elif "doji" in txt and "nhẫn" in txt and "DOJI" not in brands_found:
-                results.append({"brand": "DOJI", "type": "Nhẫn Tròn DOJI 24K", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+            elif "doji" in txt and "hà nội" in txt and "DOJI" not in brands_found:
+                results.append({"brand": "DOJI", "type": "Vàng Miếng DOJI", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
                 brands_found.append("DOJI")
+
     except Exception:
         pass
 
