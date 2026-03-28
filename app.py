@@ -3,14 +3,16 @@ import os
 import sys
 from datetime import datetime
 
-# ─── DEBUG INITIALIZATION ────────────────────────────────────────────────────
-# This ensures that even if imports fail later, we see something.
+# ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="V-Macro Insights",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ─── DEBUG INITIALIZATION ────────────────────────────────────────────────────
+# This ensures that even if imports fail later, we see something.
 
 try:
     from utils.data_collector import get_global_indicators, scrape_gold_prices_domestic, get_market_news
@@ -112,11 +114,9 @@ section[data-testid="stSidebar"] { background: #0d1424; border-right: 1px solid 
 </style>
 """, unsafe_allow_html=True)
 
-# ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### ⚙️ Cấu hình")
-
-    # API key: prioritized from secrets/env (no hardcoding to prevent leaks)
+    # API key check
     api_key_env = st.secrets.get("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
     
     if api_key_env:
@@ -135,8 +135,7 @@ with st.sidebar:
         st.rerun()
 
     st.divider()
-    st.caption("**V-Macro Insights v3.5**\nDữ liệu: CafeF, DNSE, Yahoo Finance\nVàng: BTMC, BTMH, SJC, DOJI, PNJ\n\n© 2026 Macro Dashboard Project")
-
+    st.caption("**V-Macro Insights v3.6**\nDữ liệu: CafeF, Yahoo Finance, Tygia.vn\nVàng: BTMC, SJC, DOJI, PNJ\n\n© 2026 Macro Dashboard Project")
 
 
 # ─── HEADER ──────────────────────────────────────────────────────────────────
@@ -160,6 +159,15 @@ def load_gold():         return scrape_gold_prices_domestic()
 
 @st.cache_data(ttl=1800, show_spinner=False)
 def load_news():         return get_market_news()
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_ai_analysis(_api_key, indicators, gold_data, news):
+    """Cached AI analysis with better RPM using Gemini 1.5 Flash."""
+    try:
+        if not _api_key: return None
+        return MacroAnalyzer(_api_key).analyze(indicators, gold_data, news)
+    except Exception as e:
+        return {"error": str(e)}
 
 
 with st.spinner("⏳ Đang nạp dữ liệu thị trường..."):
@@ -260,26 +268,28 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 
 # ─── AI ANALYSIS ─────────────────────────────────────────────────────────────
-if api_key and "analysis" not in st.session_state:
-    with st.status("🧠 AI đang phân tích dữ liệu vĩ mô...", expanded=True) as status:
-        try:
-            # Add a small timeout or check if indicators has any data
-            if not indicators:
-                raise ValueError("Không có dữ liệu kinh tế để phân tích.")
+if api_key:
+    # Use session state to handle 'Làm mới' manually, but cache for stability
+    if "analysis" not in st.session_state:
+        with st.status("🧠 AI đang phân tích dữ liệu vĩ mô...", expanded=True) as status:
+            try:
+                if not indicators:
+                    raise ValueError("Không có dữ liệu kinh tế để phân tích.")
                 
-            analyzer = MacroAnalyzer(api_key)
-            result = analyzer.analyze(indicators, gold_data, news)
-            
-            if result and (result.get("positive_sectors") or result.get("negative_sectors")):
-                st.session_state["analysis"] = result
-                status.update(label="💎 Phân tích hoàn tất!", state="complete", expanded=False)
-            else:
-                status.update(label="⚠️ AI trả về dữ liệu rỗng. Vui lòng thử lại.", state="error", expanded=True)
+                # Fetch through cached function
+                result = get_ai_analysis(api_key, indicators, gold_data, news)
+                
+                if result and not result.get("error"):
+                    st.session_state["analysis"] = result
+                    status.update(label="💎 Phân tích hoàn tất!", state="complete", expanded=False)
+                else:
+                    err_msg = result.get("error", "AI trả về dữ liệu rỗng")
+                    status.update(label=f"⚠️ Lỗi AI (429/Quota): {err_msg}", state="error", expanded=True)
+                    st.session_state["analysis"] = None
+            except Exception as e:
+                status.update(label=f"❌ Lỗi: {str(e)[:100]}", state="error", expanded=True)
                 st.session_state["analysis"] = None
-        except Exception as e:
-            status.update(label=f"❌ Lỗi: {str(e)[:100]}", state="error", expanded=True)
-            st.session_state["analysis"] = None
-elif not api_key:
+else:
     st.info("💡 Nhập Google API Key ở thanh bên trái để kích hoạt phân tích AI.")
 
 analysis = st.session_state.get("analysis")
