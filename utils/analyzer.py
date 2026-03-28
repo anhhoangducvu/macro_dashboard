@@ -31,23 +31,23 @@ DỮ LIỆU VĨ MÔ:
 3. Tin thế giới: {" | ".join(news.get("world", [])[:5])}
 4. Tin trong nước: {" | ".join(news.get("domestic", [])[:5])}
 
-NHIỆM VỤ: Chỉ trả về JSON thuần (không markdown, không giải thích ngoài JSON):
+NHIỆM VỤ: Phân tích sâu sắc bối cảnh vĩ mô và trả về JSON thuần (không giải thích ngoài JSON):
 {{
-  "sentiment": "Sợ hãi | Trung lập | Hưng phấn",
-  "summary": "Phân tích vĩ mô 3-4 câu bằng tiếng Việt, tập trung vào tác động của các chỉ số chính lên VN-Index.",
+  "sentiment": "Sợ hãi | Tiêu cực | Trung lập | Tích cực | Hưng phấn",
+  "summary": "Phân tích vĩ mô cô đọng 3-5 câu bằng tiếng Việt, giải thích mối liên hệ logic giữa các chỉ số quốc tế (DXY, Brent, Yield) với VN-Index.",
   "positive_sectors": [
-    {{"name": "Tên ngành", "reason": "Giải thích chi tiết từ 1-3 dòng về lý do ngành này hưởng lợi dựa trên bối cảnh vĩ mô hiện tại.", "tickers": ["MÃ1","MÃ2","MÃ3","MÃ4","MÃ5"]}}
+    {{"name": "Tên ngành", "reason": "Giải thích chi tiết 2-3 câu về lý do tại sao các biến số vĩ mô trên hỗ trợ trực tiếp cho lợi nhuận của doanh nghiệp trong ngành.", "tickers": ["MÃ1","MÃ2","MÃ3","MÃ4","MÃ5"]}}
   ],
   "negative_sectors": [
-    {{"name": "Tên ngành", "reason": "Giải thích chi tiết từ 1-3 dòng về các rủi ro cụ thể mà ngành này đang đối mặt.", "tickers": ["MÃ1","MÃ2","MÃ3","MÃ4","MÃ5"]}}
+    {{"name": "Tên ngành", "reason": "Giải thích chi tiết 2-3 câu về các áp lực chi phí đầu vào, tỷ giá hay cầu yếu đang trực tiếp đe dọa biên lợi nhuận của ngành.", "tickers": ["MÃ1","MÃ2","MÃ3","MÃ4","MÃ5"]}}
   ],
-  "gold_advice": "Lời khuyên hành động cụ thể cho nhà đầu tư vàng nhẫn và vàng miếng tại Việt Nam."
+  "gold_advice": "Lời khuyên chiến thuật cho nhà đầu tư (Mua/Bán/Giữ) dựa trên chênh lệch giá với thế giới và xu hướng tỷ giá VND."
 }}
 
-Quy tắc quan trọng: 
-- ĐÚNG ĐỦ 5 ngành hưởng lợi + 5 ngành rủi ro.
-- Phần 'reason' PHẢI giải thích sâu sắc (1-3 câu), không được ghi quá ngắn.
-- Toàn bộ bằng tiếng Việt. Toàn bộ mã cổ phiếu phải chính xác trên sàn HOSE/HNX."""
+QUY TẮC:
+- Phải có ĐỦ 5 ngành positive và 5 ngành negative.
+- Lý do (reason) phải CHUYÊN SÂU, không ghi chung chung 'được hỗ trợ'.
+- Toàn bộ bằng tiếng Việt. Mã cổ phiếu HOSE/HNX chính xác."""
 
 
         try:

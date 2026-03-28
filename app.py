@@ -116,21 +116,26 @@ section[data-testid="stSidebar"] { background: #0d1424; border-right: 1px solid 
 with st.sidebar:
     st.markdown("### ⚙️ Cấu hình")
 
-    # API key: prioritized from secrets/env (no manual input as per user request)
-    api_key = st.secrets.get("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
+    # API key: prioritized from secrets/env (no hardcoding to prevent leaks)
+    api_key_env = st.secrets.get("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
     
-    if api_key:
-        st.success("✅ AI Engine: Connected")
+    if api_key_env:
+        api_key = api_key_env
+        mask = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else "****"
+        st.success(f"✅ AI Connected ({mask})")
     else:
-        st.warning("⚠️ API Key chưa được cấu hình trong Secrets.")
+        api_key = st.text_input("🔑 Nhập Google API Key:", type="password", placeholder="AIzaSy...")
+        if not api_key:
+            st.warning("⚠️ Cần API Key để sử dụng AI.")
 
     if st.button("🔄 Làm mới dữ liệu", type="primary", use_container_width=True):
         st.cache_data.clear()
-        st.session_state.pop("analysis", None)
+        if "analysis" in st.session_state:
+            del st.session_state["analysis"]
         st.rerun()
 
     st.divider()
-    st.caption("**V-Macro Insights v3.5**\nDữ liệu: CafeF, DNSE, Yahoo Finance\nVàng: BTMC, BTMH, SJC, DOJI, PNJ\n\n© 2026 TEXO Engineering")
+    st.caption("**V-Macro Insights v3.5**\nDữ liệu: CafeF, DNSE, Yahoo Finance\nVàng: BTMC, BTMH, SJC, DOJI, PNJ\n\n© 2026 Macro Dashboard Project")
 
 
 
@@ -256,12 +261,23 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ─── AI ANALYSIS ─────────────────────────────────────────────────────────────
 if api_key and "analysis" not in st.session_state:
-    with st.status("🧠 AI đang phân tích dữ liệu vĩ mô…", expanded=True) as status:
+    with st.status("🧠 AI đang phân tích dữ liệu vĩ mô...", expanded=True) as status:
         try:
-            st.session_state["analysis"] = MacroAnalyzer(api_key).analyze(indicators, gold_data, news)
-            status.update(label="💎 Phân tích hoàn tất!", state="complete", expanded=False)
+            # Add a small timeout or check if indicators has any data
+            if not indicators:
+                raise ValueError("Không có dữ liệu kinh tế để phân tích.")
+                
+            analyzer = MacroAnalyzer(api_key)
+            result = analyzer.analyze(indicators, gold_data, news)
+            
+            if result and (result.get("positive_sectors") or result.get("negative_sectors")):
+                st.session_state["analysis"] = result
+                status.update(label="💎 Phân tích hoàn tất!", state="complete", expanded=False)
+            else:
+                status.update(label="⚠️ AI trả về dữ liệu rỗng. Vui lòng thử lại.", state="error", expanded=True)
+                st.session_state["analysis"] = None
         except Exception as e:
-            status.update(label=f"❌ Lỗi: {e}", state="error", expanded=True)
+            status.update(label=f"❌ Lỗi: {str(e)[:100]}", state="error", expanded=True)
             st.session_state["analysis"] = None
 elif not api_key:
     st.info("💡 Nhập Google API Key ở thanh bên trái để kích hoạt phân tích AI.")
@@ -317,5 +333,5 @@ with col_neg:
 
 # ─── FOOTER ──────────────────────────────────────────────────────────────────
 st.markdown("""<div style="text-align:center;color:#334155;font-size:12px;margin-top:30px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06)">
-  © 2026 TEXO Engineering | V-Macro Insights v3.0 | Dữ liệu chỉ mang tính chất tham khảo
+  © 2026 Macro Dashboard | V-Macro Insights v3.0 | Dữ liệu mang tính chất tham khảo
 </div>""", unsafe_allow_html=True)

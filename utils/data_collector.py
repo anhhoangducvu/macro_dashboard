@@ -85,50 +85,47 @@ def scrape_gold_prices_domestic() -> list[dict]:
     """
     Scrape Vietnamese domestic gold prices.
     Priority: Rings for BTMC & BTMH. Bars for SJC, DOJI, PNJ.
-    Returns: [{brand, type, buy, sell}]
     """
     results = []
 
-    # ── 1. SJC ──────────────────────────────────────────────────────────────
-    try:
-        resp = requests.get("https://sjc.com.vn/", headers=HEADERS, timeout=10)
-        soup = BeautifulSoup(resp.content, "html.parser")
-        for row in soup.find_all("tr"):
-            cols = [td.get_text(strip=True) for td in row.find_all("td")]
-            if len(cols) >= 3 and "SJC" in cols[0].upper() and "TP.HCM" in cols[0].upper():
-                results.append({"brand": "SJC", "type": "Vàng Miếng SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
-                break
-    except Exception: pass
-
-    # ── 2. BTMC (Bảo Tín Minh Châu) ─────────────────────────────────────────
+    # ── 1. BTMC (Bảo Tín Minh Châu) - PRIORITY: Ring ───────────────────────
     try:
         resp = requests.get("https://btmc.vn/", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
         for row in soup.find_all("tr"):
             txt = row.get_text(" ", strip=True).upper()
-            if "RỒNG THĂNG LONG" in txt or "NHẪN TRÒN" in txt:
+            if ("RỒNG THĂNG LONG" in txt or "NHẪN TRÒN" in txt) and "999.9" in txt:
                 tds = [td.get_text(strip=True) for td in row.find_all("td")]
                 if len(tds) >= 4:
-                    results.append({"brand": "BTMC", "type": "Nhẫn Tròn Rồng TL", "buy": _clean(tds[-2]), "sell": _clean(tds[-1])})
+                    results.append({"brand": "Minh Châu", "type": "Nhẫn Tròn Rồng TL", "buy": _clean(tds[-2]), "sell": _clean(tds[-1])})
                     break
     except Exception: pass
 
-    # ── 3. BTMH (Bảo Tín Mạnh Hải) ──────────────────────────────────────────
+    # ── 2. BTMH (Bảo Tín Mạnh Hải) - PRIORITY: Ring ────────────────────────
     try:
-        # BTMH usually has a clean table on their homepage or price page
         resp = requests.get("https://baotinmanhhai.vn/gia-vang", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
         for row in soup.find_all("tr"):
             txt = row.get_text(" ", strip=True).upper()
-            if "NHẪN" in txt and "MẠNH HẢI" in txt:
+            if "NHẪN" in txt and ("MẠNH HẢI" in txt or "GIA BẢO" in txt):
                 tds = [td.get_text(strip=True) for td in row.find_all("td")]
                 if len(tds) >= 3:
-                    # Usually: [Type, Buy, Sell]
-                    results.append({"brand": "BTMH", "type": "Nhẫn Kim Gia Bảo", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+                    results.append({"brand": "Mạnh Hải", "type": "Nhẫn Kim Gia Bảo", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
                     break
     except Exception: pass
 
-    # ── 4. DOJI & PNJ (Via Aggregator for stability) ───────────────────────
+    # ── 3. SJC ──────────────────────────────────────────────────────────────
+    try:
+        resp = requests.get("https://sjc.com.vn/", headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(resp.content, "html.parser")
+        for row in soup.find_all("tr"):
+            cols = [td.get_text(strip=True) for td in row.find_all("td")]
+            if len(cols) >= 3 and "SJC" in cols[0].upper() and ("TP.HCM" in cols[0].upper() or "HÀ NỘI" in cols[0].upper()):
+                results.append({"brand": "SJC", "type": "Vàng Miếng SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
+                break
+    except Exception: pass
+
+    # ── 4. DOJI & PNJ (Via Aggregator) ────────────────────────────────────
     try:
         resp = requests.get("https://giavang.org/", headers=HEADERS, timeout=10)
         soup = BeautifulSoup(resp.content, "html.parser")
@@ -142,7 +139,7 @@ def scrape_gold_prices_domestic() -> list[dict]:
                 results.append({"brand": "PNJ", "type": "Vàng Miếng SJC", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
     except Exception: pass
 
-    # Final cleanup: ensure uniqueness and limit results
+    # Filter uniqueness & handle empty
     final = []
     seen = set()
     for r in results:
@@ -153,11 +150,11 @@ def scrape_gold_prices_domestic() -> list[dict]:
     
     if not final:
         return [
-            {"brand": "BTMC", "type": "Nhẫn Tròn Rồng TL", "buy": "Đang tải...", "sell": "Đang tải..."},
-            {"brand": "BTMH", "type": "Nhẫn Kim Gia Bảo", "buy": "Đang tải...", "sell": "Đang tải..."},
-            {"brand": "SJC",  "type": "Vàng Miếng SJC",   "buy": "Đang tải...", "sell": "Đang tải..."},
+            {"brand": "Minh Châu", "type": "Nhẫn Tròn Rồng TL", "buy": "---", "sell": "---"},
+            {"brand": "Mạnh Hải", "type": "Nhẫn Kim Gia Bảo", "buy": "---", "sell": "---"},
+            {"brand": "SJC",  "type": "Vàng Miếng SJC",   "buy": "---", "sell": "---"},
         ]
-    return final
+    return final[:6]
 
 
     return results
