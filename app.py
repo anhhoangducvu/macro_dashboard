@@ -1,18 +1,27 @@
 import streamlit as st
 import os
+import sys
 from datetime import datetime
-from utils.data_collector import get_global_indicators, scrape_gold_prices_domestic, get_market_news
-from utils.analyzer import MacroAnalyzer
-from dotenv import load_dotenv
 
-load_dotenv()
-
+# ─── DEBUG INITIALIZATION ────────────────────────────────────────────────────
+# This ensures that even if imports fail later, we see something.
 st.set_page_config(
-    page_title="V-Macro Insights | Phân tích Vĩ mô Việt Nam",
+    page_title="V-Macro Insights",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
+
+try:
+    from utils.data_collector import get_global_indicators, scrape_gold_prices_domestic, get_market_news
+    from utils.analyzer import MacroAnalyzer
+except Exception as e:
+    st.error(f"❌ Lỗi khởi tạo (Import Error): {e}")
+    st.stop()
+
+from dotenv import load_dotenv
+load_dotenv()
+
 
 # ─── CSS ─────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -150,10 +159,22 @@ def load_gold():         return scrape_gold_prices_domestic()
 def load_news():         return get_market_news()
 
 
-with st.spinner("⏳ Đang tải dữ liệu thị trường..."):
-    indicators = load_indicators()
-    gold_data  = load_gold()
-    news       = load_news()
+with st.spinner("⏳ Đang nạp dữ liệu thị trường..."):
+    try:
+        indicators = load_indicators()
+    except Exception:
+        indicators = {}
+        
+    try:
+        gold_data  = load_gold()
+    except Exception:
+        gold_data = []
+        
+    try:
+        news       = load_news()
+    except Exception:
+        news = {"world": [], "domestic": []}
+
 
 
 # ─── HELPER: render indicator card ───────────────────────────────────────────

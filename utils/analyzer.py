@@ -1,5 +1,9 @@
-from google import genai
+try:
+    from google import genai
+except ImportError:
+    genai = None
 import json
+
 import re
 from datetime import datetime
 
@@ -8,8 +12,11 @@ class MacroAnalyzer:
     def __init__(self, api_key: str):
         if not api_key:
             raise ValueError("Cần API Key để thực hiện phân tích.")
+        if genai is None:
+            raise ImportError("Thư viện 'google-genai' chưa được cài đặt. Vui lòng kiểm tra requirements.txt.")
         self.client = genai.Client(api_key=api_key)
         self.model = "gemini-2.0-flash"
+
 
     def analyze(self, indicators: dict, gold_domestic: list, news: dict) -> dict:
         now = datetime.now().strftime("%d/%m/%Y %H:%M")
