@@ -1,165 +1,193 @@
 import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 from datetime import datetime
-import json
-import re
 import time
+import re
 
-def get_vn_index_robust(symbol="VNINDEX"):
-    """
-    Yahoo Finance priority with multiple fallback sources for VN market.
-    """
-    # 1. Yahoo Finance (User preferred)
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+}
+
+# ─── HELPERS ──────────────────────────────────────────────────────────────────
+
+def _yf(symbol: str) -> dict:
+    """Fetch latest close + % change from Yahoo Finance."""
     try:
-        yf_sym = "^VNINDEX" if symbol == "VNINDEX" else ("^VN30" if symbol == "VN30" else "^HNX")
-        ticker = yf.Ticker(yf_sym)
-        hist = ticker.history(period="5d")
+        hist = yf.Ticker(symbol).history(period="5d")
         if not hist.empty:
-            current = float(hist['Close'].iloc[-1])
-            prev = float(hist['Close'].iloc[-2]) if len(hist) > 1 else current
-            pct = ((current - prev) / prev * 100) if prev != 0 else 0
-            return {"value": round(current, 2), "percent": round(pct, 2)}
-    except:
+            cur  = float(hist["Close"].iloc[-1])
+            prev = float(hist["Close"].iloc[-2]) if len(hist) > 1 else cur
+            pct  = round((cur - prev) / prev * 100, 2) if prev else 0.0
+            return {"value": round(cur, 2), "percent": pct}
+    except Exception:
         pass
-
-    # 2. DNSE API (Robust Fallback)
-    try:
-        s_code = symbol.replace("^", "").upper()
-        now_ts = int(time.time())
-        start_ts = now_ts - (7 * 24 * 3600)
-        url = f"https://api.dnse.com.vn/chart-api/v2/ohlcs/index?symbol={s_code}&resolution=1D&from={start_ts}&to={now_ts}"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        api_data = resp.json()
-        if 'c' in api_data and len(api_data['c']) > 0:
-            current = float(api_data['c'][-1])
-            prev = float(api_data['c'][-2]) if len(api_data['c']) > 1 else current
-            pct = ((current - prev) / prev * 100) if prev != 0 else 0
-            return {"value": round(current, 2), "percent": round(pct, 2)}
-    except:
-        pass
-
-    # 3. VnExpress Widget Fallback
-    try:
-        url = f"https://vne-finance.vnecdn.net/v1/widget/stock?symbol={symbol}"
-        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        vne_data = resp.json()
-        if 'data' in vne_data and symbol in vne_data['data']:
-            node = vne_data['data'][symbol]
-            return {"value": float(node['price']), "percent": float(node['percent'])}
-    except:
-        pass
-
     return {"value": "N/A", "percent": 0.0}
 
-def get_global_indicators():
-    """
-    Fetch global macro indicators with Yahoo Finance Priority.
-    """
-    symbols = {
-        "VN-Index": "VNINDEX", 
-        "VN30-Index": "VN30",
-        "HNX-Index": "HNX",
-        "DXY": "DX-Y.NYB",
-        "S&P 500": "^GSPC",
-        "Gold (World)": "GC=F",
-        "Oil (WTI)": "CL=F",
-        "Bitcoin": "BTC-USD",
-        "USD/VND": "VND=X",
-        "US 10Y Yield": "^TNX"
-    }
 
-    data = {}
-    for name, symbol in symbols.items():
-        if name in ["VN-Index", "VN30-Index", "HNX-Index"]:
-            data[name] = get_vn_index_robust(symbol)
-        else:
-            try:
-                ticker = yf.Ticker(symbol)
-                hist = ticker.history(period="5d")
-                if not hist.empty:
-                    current = float(hist['Close'].iloc[-1])
-                    prev = float(hist['Close'].iloc[-2]) if len(hist) > 1 else current
-                    pct = ((current - prev)/prev * 100) if prev != 0 else 0
-                    data[name] = {"value": round(current, 2), "percent": round(pct, 2)}
-                else:
-                    data[name] = {"value": "N/A", "percent": 0}
-            except:
-                data[name] = {"value": "Err", "percent": 0}
+def _vn_dnse(symbol: str) -> dict | None:
+    """DNSE API fallback for VN market indices."""
+    try:
+        ts  = int(time.time())
+        url = (f"https://api.dnse.com.vn/chart-api/v2/ohlcs/index"
+               f"?symbol={symbol}&resolution=1D&from={ts-604800}&to={ts}")
+        d = requests.get(url, headers=HEADERS, timeout=8).json()
+        if "c" in d and d["c"]:
+            cur  = float(d["c"][-1])
+            prev = float(d["c"][-2]) if len(d["c"]) > 1 else cur
+            return {"value": round(cur, 2), "percent": round((cur - prev) / prev * 100, 2)}
+    except Exception:
+        pass
+    return None
+
+
+# ─── 12 GLOBAL INDICATORS ─────────────────────────────────────────────────────
+
+def get_global_indicators() -> dict:
+    """
+    Return dict of 12 macro indicators matching the V-Macro Insights dashboard.
+    Keys: VN-Index, S&P 500, Bitcoin, DXY, USD/VND, Gold (World),
+          Oil (Brent), FED Rate, VIX, US 10Y Yield, Hang Seng, Copper
+    """
+    YF_MAP = {
+        "S&P 500":      "^GSPC",
+        "Bitcoin":      "BTC-USD",
+        "DXY":          "DX-Y.NYB",
+        "USD/VND":      "USDVND=X",
+        "Gold (World)": "GC=F",
+        "Oil (Brent)":  "BZ=F",
+        "FED Rate":     "^IRX",      # 13-week T-bill ≈ Fed rate proxy
+        "VIX":          "^VIX",
+        "US 10Y Yield": "^TNX",
+        "Hang Seng":    "^HSI",
+        "Copper":       "HG=F",
+    }
+    data = {name: _yf(sym) for name, sym in YF_MAP.items()}
+
+    # VN-INDEX with DNSE fallback
+    vni = _yf("^VNINDEX")
+    if vni["value"] == "N/A":
+        vni = _vn_dnse("VNINDEX") or {"value": "N/A", "percent": 0.0}
+    data["VN-Index"] = vni
+
     return data
 
-def scrape_gold_prices():
-    """
-    Scrape domestic gold prices for specific brands requested by the user.
-    """
-    results = {
-        "PNJ": {"buy": "N/A", "sell": "N/A"}, 
-        "SJC": {"buy": "N/A", "sell": "N/A"},
-        "Bảo Tín Minh Châu": {"buy": "N/A", "sell": "N/A"},
-        "Mạnh Hải": {"buy": "N/A", "sell": "N/A"}
-    }
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
 
-    # 1. PNJ & SJC (from giavang.org - aggregated)
-    try:
-        resp = requests.get("https://giavang.org/", headers=headers, timeout=10)
-        soup = BeautifulSoup(resp.content, "html.parser")
-        rows = soup.find_all("tr")
-        for row in rows:
-            txt = row.get_text().lower()
-            if "nhẫn" in txt:
-                if "pnj" in txt:
-                    tds = row.find_all("td")
-                    if len(tds) >= 3: results["PNJ"] = {"buy": tds[1].text.strip(), "sell": tds[2].text.strip()}
-                if "sjc" in txt:
-                    tds = row.find_all("td")
-                    if len(tds) >= 3: results["SJC"] = {"buy": tds[1].text.strip(), "sell": tds[2].text.strip()}
-    except: pass
+# ─── DOMESTIC GOLD PRICES ─────────────────────────────────────────────────────
 
-    # 2. Bảo Tín Minh Châu (Direct)
+def _clean(raw: str) -> str:
+    return raw.strip().replace("\xa0", "").replace("\u202f", "").strip() if raw else "N/A"
+
+
+def scrape_gold_prices_domestic() -> list[dict]:
+    """
+    Scrape Vietnamese domestic gold prices from multiple sources.
+    Returns list of dicts: {brand, type, buy, sell}
+    Priority order: SJC → BTMC → DOJI → giavang.org (PNJ/fallback)
+    """
+    results = []
+
+    # ── 1. SJC ──────────────────────────────────────────────────────────────
     try:
-        resp = requests.get("https://btmc.vn/", headers=headers, timeout=10)
+        resp = requests.get("https://sjc.com.vn/", headers=HEADERS, timeout=12)
         soup = BeautifulSoup(resp.content, "html.parser")
-        # Direct search for the Nhẫn Tròn Trơn row
-        table = soup.find("table")
+        # Try to find the main gold price table
+        table = soup.find("table", {"id": "gia-vang-sjc"}) or soup.find("table")
         if table:
-            rows = table.find_all("tr")
-            for row in rows:
-                if "NHẪN TRÒN TRƠN" in row.get_text().upper():
-                    tds = row.find_all("td")
-                    if len(tds) >= 5:
-                        # BTMC table usually has Buy at index 3 and Sell at index 4 (0-indexed)
-                        results["Bảo Tín Minh Châu"] = {"buy": tds[3].text.strip(), "sell": tds[4].text.strip()}
-                        break
-    except: pass
+            for row in table.find_all("tr"):
+                cols = [td.get_text(strip=True) for td in row.find_all("td")]
+                if len(cols) >= 3:
+                    name_up = cols[0].upper()
+                    if any(k in name_up for k in ["MIẾNG", "VÀNG SJC", "VÀNG S."]):
+                        results.append({"brand": "SJC", "type": "Vàng Miếng SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
+                    elif any(k in name_up for k in ["NHẪN", "TRÒN"]):
+                        results.append({"brand": "SJC", "type": "Nhẫn Tròn SJC", "buy": _clean(cols[1]), "sell": _clean(cols[2])})
+    except Exception:
+        pass
 
-    # 3. Bảo Tín Mạnh Hải (Direct)
+    # ── 2. BTMC ─────────────────────────────────────────────────────────────
     try:
-        resp = requests.get("https://baotinmanhhai.vn/gia-vang-hom-nay", headers=headers, timeout=10)
+        resp = requests.get("https://btmc.vn/", headers=HEADERS, timeout=12)
         soup = BeautifulSoup(resp.content, "html.parser")
-        rows = soup.find_all("tr")
-        for row in rows:
-            if "Nhẫn Tròn ép vỉ" in row.get_text():
-                tds = row.find_all("td")
-                if len(tds) >= 3:
-                    results["Mạnh Hải"] = {"buy": tds[1].text.strip(), "sell": tds[2].text.strip()}
+        for row in soup.find_all("tr"):
+            txt = row.get_text(" ", strip=True).upper()
+            if "NHẪN TRÒN TRƠN" in txt:
+                tds = [td.get_text(strip=True) for td in row.find_all("td")]
+                if len(tds) >= 5:
+                    results.append({"brand": "BTMC", "type": "Nhẫn Tròn 999.9", "buy": _clean(tds[3]), "sell": _clean(tds[4])})
                     break
-    except: pass
+    except Exception:
+        pass
+
+    # ── 3. DOJI ─────────────────────────────────────────────────────────────
+    try:
+        resp = requests.get("https://doji.vn/gia-vang/", headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(resp.content, "html.parser")
+        for row in soup.find_all("tr"):
+            txt = row.get_text(" ", strip=True).lower()
+            if "nhẫn" in txt and "doji" not in str([r["brand"] for r in results]):
+                tds = [td.get_text(strip=True) for td in row.find_all("td")]
+                if len(tds) >= 3:
+                    results.append({"brand": "DOJI", "type": "Nhẫn Tròn DOJI 24K", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+                    break
+    except Exception:
+        pass
+
+    # ── 4. giavang.org (aggregator — PNJ & missing sources) ──────────────────
+    try:
+        resp = requests.get("https://giavang.org/", headers=HEADERS, timeout=10)
+        soup = BeautifulSoup(resp.content, "html.parser")
+        brands_found = [r["brand"] for r in results]
+        for row in soup.find_all("tr"):
+            txt = row.get_text(" ", strip=True).lower()
+            tds = [td.get_text(strip=True) for td in row.find_all("td")]
+            if len(tds) < 3:
+                continue
+            if "pnj" in txt and "nhẫn" in txt and "PNJ" not in brands_found:
+                results.append({"brand": "PNJ", "type": "Nhẫn PNJ 24K", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+                brands_found.append("PNJ")
+            elif "doji" in txt and "nhẫn" in txt and "DOJI" not in brands_found:
+                results.append({"brand": "DOJI", "type": "Nhẫn Tròn DOJI 24K", "buy": _clean(tds[1]), "sell": _clean(tds[2])})
+                brands_found.append("DOJI")
+    except Exception:
+        pass
+
+    # ── Fallback nếu tất cả thất bại ────────────────────────────────────────
+    if not results:
+        results = [
+            {"brand": "SJC",  "type": "Vàng Miếng SJC",   "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
+            {"brand": "BTMC", "type": "Nhẫn Tròn 999.9",  "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
+            {"brand": "DOJI", "type": "Nhẫn Tròn 24K",    "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
+            {"brand": "PNJ",  "type": "Nhẫn PNJ 24K",     "buy": "Đang cập nhật", "sell": "Đang cập nhật"},
+        ]
 
     return results
 
-def get_market_news():
-    """
-    Get latest headlines from CafeF macro section.
-    """
-    news = []
+
+# ─── MARKET NEWS ──────────────────────────────────────────────────────────────
+
+def _scrape_cafef(url: str, limit: int = 8) -> list[str]:
+    headlines = []
     try:
-        resp = requests.get("https://cafef.vn/vi-mo-dau-tu.chn", headers={"User-Agent":"Mozilla/5.0"}, timeout=10)
-        soup = BeautifulSoup(resp.content, "html.parser")
-        items = soup.find_all("h3")
-        for i in items[:15]:
-            title = i.get_text().strip()
-            if len(title) > 20: news.append(title)
-    except: pass
-    return list(set(news))[:20]
+        soup = BeautifulSoup(requests.get(url, headers=HEADERS, timeout=10).content, "html.parser")
+        for tag in soup.find_all(["h2", "h3"]):
+            title = tag.get_text(strip=True)
+            if len(title) > 25:
+                headlines.append(title)
+            if len(headlines) >= limit * 2:
+                break
+    except Exception:
+        pass
+    return list(dict.fromkeys(headlines))[:limit]
+
+
+def get_market_news() -> dict:
+    """
+    Return {"world": [...], "domestic": [...]} with latest macro news from CafeF.
+    """
+    return {
+        "world":    _scrape_cafef("https://cafef.vn/tai-chinh-quoc-te.chn"),
+        "domestic": _scrape_cafef("https://cafef.vn/vi-mo-dau-tu.chn"),
+    }
